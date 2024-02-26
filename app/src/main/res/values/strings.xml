@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">shoppingList</string>
+    <string name="enter_basket_name">Введите название списка покупок</string>
+    <string name="low">низкий</string>
+    <string name="medium">средний</string>
+    <string name="high">высокий</string>
+    <string name="list_priority">Приоритет списка:</string>
+    <string name="Save">Сохранить</string>
+    <string name="enter_date_purchased">Выберите дату покупки</string>
+    <string name="enter_goods">Введите товар</string>
+</resources>
