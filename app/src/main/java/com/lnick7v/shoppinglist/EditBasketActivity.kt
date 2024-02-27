@@ -9,20 +9,56 @@ import android.widget.EditText
 import android.widget.RadioButton
 import android.widget.Toast
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.RecyclerView
 
-class AddBasketActivity : AppCompatActivity() {
+class EditBasketActivity : AppCompatActivity() {
     private lateinit var editTextBasketName: EditText
     private lateinit var editTextDateOfBasket: EditText
     private lateinit var radioButtonLow: RadioButton
     private lateinit var radioButtonMedium: RadioButton
     private lateinit var radioButtonHigh: RadioButton
     private lateinit var buttonSave: Button
-    private lateinit var viewModel: AddBasketViewModel
+    private lateinit var viewModel: EditBasketViewModel
+    private lateinit var productsAdapter: ProductsAdapter
+    private lateinit var recyclerViewProducts: RecyclerView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_basket)
-        viewModel = ViewModelProvider(this).get(AddBasketViewModel::class.java)
+        viewModel = ViewModelProvider(this).get(EditBasketViewModel::class.java)
         initViews()
+
+        productsAdapter = ProductsAdapter()
+        recyclerViewProducts.adapter = productsAdapter
+
+        viewModel.getProducts().observe(this) { products ->
+            productsAdapter.setProducts(products)
+        }
+
+        viewModel.addProduct(Product("вобла", 100.50, 1))
+        viewModel.addProduct(Product("мясо", 200.50, 1))
+
+        val itemTouchHelper = ItemTouchHelper(object: ItemTouchHelper
+            .SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT){
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                return false
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val position = viewHolder.adapterPosition
+                val product = productsAdapter.getProducts()[position]
+                viewModel.removeProduct(product)
+            }
+        })
+
+        itemTouchHelper.attachToRecyclerView(recyclerViewProducts)
+
+
 
         viewModel.getCloseScreen().observe(this) { closeScreen ->
             if(closeScreen) finish()
@@ -59,11 +95,12 @@ class AddBasketActivity : AppCompatActivity() {
         radioButtonMedium = findViewById(R.id.radioButtonMedium)
         radioButtonHigh = findViewById(R.id.radioButtonHigh)
         buttonSave = findViewById(R.id.buttonSave)
+        recyclerViewProducts = findViewById(R.id.recyclerViewProduct)
     }
 
     companion object {
         fun newIntent(context: Context): Intent {
-            return Intent(context, AddBasketActivity::class.java)
+            return Intent(context, EditBasketActivity::class.java)
         }
     }
 }

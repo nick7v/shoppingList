@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
 
 
         buttonAddBasket.setOnClickListener {
-            startActivity(AddBasketActivity.newIntent(this))
+            startActivity(EditBasketActivity.newIntent(this))
         }
     }
 

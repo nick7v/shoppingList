@@ -15,7 +15,7 @@
         android:layout_height="match_parent">
 
         <EditText
-            android:id="@+id/textViewProductName"
+            android:id="@+id/editTextProductName"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:background="@null"
@@ -49,7 +49,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_chainStyle="spread_inside"
-            app:layout_constraintStart_toEndOf="@+id/textViewProductName"
+            app:layout_constraintStart_toEndOf="@+id/editTextProductName"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="1000р" />
     </androidx.constraintlayout.widget.ConstraintLayout>

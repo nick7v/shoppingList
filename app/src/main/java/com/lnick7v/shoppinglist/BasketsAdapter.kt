@@ -21,9 +21,9 @@ class BasketsAdapter: RecyclerView.Adapter<BasketsAdapter.BasketsViewHolder>() {
     }
 
     class BasketsViewHolder(view: View): RecyclerView.ViewHolder(view) {
-        var textViewBasket = view.findViewById<TextView>(R.id.textViewBasket)
-        var textViewBasketDate = view.findViewById<TextView>(R.id.textViewBasketDate)
-        var cardViewBasketItem = view.findViewById<CardView>(R.id.cardViewBasketItem)
+        var textViewBasket: TextView = view.findViewById(R.id.textViewBasket)
+        var textViewBasketDate: TextView = view.findViewById(R.id.textViewBasketDate)
+        var cardViewBasketItem: CardView = view.findViewById(R.id.cardViewBasketItem)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BasketsViewHolder {

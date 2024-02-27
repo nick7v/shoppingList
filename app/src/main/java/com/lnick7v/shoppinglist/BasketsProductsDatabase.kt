@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 const val DB_NAME = "baskets_products.db"
-@Database (entities = [Basket::class/*, Product::class*/], version = 2, exportSchema = false)
+@Database (entities = [Basket::class, Product::class], version = 3, exportSchema = false)
 abstract class BasketsProductsDatabase: RoomDatabase() {
     companion object {
         private var instance: BasketsProductsDatabase? = null
@@ -19,6 +19,6 @@ abstract class BasketsProductsDatabase: RoomDatabase() {
             return instance!!
         }
     }
-   // abstract fun ProductsDao(): ProductsDao
+   abstract fun ProductsDao(): ProductsDao
     abstract fun BasketDao(): BasketDao
 }
