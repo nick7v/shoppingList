@@ -8,8 +8,8 @@ class Basket(
     @field: PrimaryKey(autoGenerate = true)
     val id: Int,
     val name: String,
-    val date: String,
-    val products: Product
+    val priority: Int,
+    val date: String
 ) {
-    constructor(name: String, date: String, products: Product): this(0, name, date, products)
+    constructor(name: String, priority: Int, date: String): this(0, name, priority, date)
 }
