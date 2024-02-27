@@ -9,10 +9,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
-    lateinit var buttonAddBasket: FloatingActionButton
-    lateinit var recyclerViewBasket: RecyclerView
-    lateinit var basketsAdapter: BasketsAdapter
-    lateinit var mainViewModel: MainViewModel
+    private lateinit var buttonAddBasket: FloatingActionButton
+    private lateinit var recyclerViewBasket: RecyclerView
+    private lateinit var basketsAdapter: BasketsAdapter
+    private lateinit var mainViewModel: MainViewModel
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -24,10 +24,6 @@ class MainActivity : AppCompatActivity() {
         mainViewModel.getBaskets().observe(this) { baskets ->
             basketsAdapter.setBaskets(baskets)
         }
-
-
-        mainViewModel.add(Basket("name 1", 0,"01.01.2023" ))
-        mainViewModel.add(Basket("name 2", 1,"02.02.2022" ))
 
 
 

@@ -14,8 +14,4 @@ class MainViewModel(application: Application): AndroidViewModel(application) {
     fun remove (basket: Basket) {
         Thread {basketsProductsDatabase.BasketDao().remove(basket.id)}.start()
     }
-
-    fun add (basket: Basket) {
-        Thread { basketsProductsDatabase.BasketDao().add(basket)}.start() ///!!!!!!!!!!!!!!!!
-    }
 }
