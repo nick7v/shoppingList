@@ -21,9 +21,9 @@ class MainActivity : AppCompatActivity() {
         basketsAdapter = BasketsAdapter()
         recyclerViewBasket.adapter = basketsAdapter
 
-        mainViewModel.getBaskets().observe(this, Observer { baskets ->
+        mainViewModel.getBaskets().observe(this) { baskets ->
             basketsAdapter.setBaskets(baskets)
-        })
+        }
 
 
         mainViewModel.add(Basket("name 1", 0,"01.01.2023" ))
