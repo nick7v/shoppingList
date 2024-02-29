@@ -8,8 +8,8 @@ import androidx.room.Query
 
 @Dao
 interface ProductsDao {
-    @Query("SELECT * FROM products")
-    fun getProducts(): LiveData<List<Product>> // get all products from Product DB
+    @Query("SELECT * FROM products WHERE basketId = :idBasket")
+    fun getProducts(idBasket: Int): LiveData<List<Product>> // get all products from Product DB
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) // add product to Product DB
     fun add(product: Product)

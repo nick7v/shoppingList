@@ -2,15 +2,17 @@ package com.lnick7v.shoppinglist
 
 import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.RadioButton
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
+
+const val BASKET_ID = "idBasket"
 
 class EditBasketActivity : AppCompatActivity() {
     private lateinit var editTextBasketName: EditText
@@ -23,16 +25,20 @@ class EditBasketActivity : AppCompatActivity() {
     private lateinit var productsAdapter: ProductsAdapter
     private lateinit var recyclerViewProducts: RecyclerView
 
+    private var basketID: Int = -1
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_basket)
-        viewModel = ViewModelProvider(this).get(EditBasketViewModel::class.java)
+        viewModel = ViewModelProvider(this)[EditBasketViewModel::class.java]
         initViews()
+        selectActivityStartMode()  // edit existing or create new basket
+
 
         productsAdapter = ProductsAdapter()
         recyclerViewProducts.adapter = productsAdapter
 
-        viewModel.getProducts().observe(this) { products ->
+        viewModel.getProducts(basketID).observe(this) { products ->
             productsAdapter.setProducts(products)
         }
 
@@ -74,6 +80,7 @@ class EditBasketActivity : AppCompatActivity() {
             Toast.makeText(this, "Укажите название и дату", Toast.LENGTH_SHORT).show()
         } else {
             val basket = Basket(
+                basketID,
                 editTextBasketName.text.toString().trim(),
                 getPriority(),
                 editTextDateOfBasket.text.toString().trim())
@@ -82,6 +89,35 @@ class EditBasketActivity : AppCompatActivity() {
         }
     }
 
+
+    private fun selectActivityStartMode() {
+        basketID = intent.getIntExtra(BASKET_ID, -1)
+        if(basketID != -1) { //Edit an existing basket
+            startActivityInEditBasketMode(basketID)
+        } else { //Create a new basket
+            basketID = viewModel.getNewBasketId()
+        }
+    }
+
+    private fun startActivityInEditBasketMode(idBasket: Int) {
+        val basket = viewModel.editBasket(idBasket)
+        editTextBasketName.setText(basket.name)
+        editTextDateOfBasket.setText(basket.date)
+        setPriority(basket.priority)
+
+    }
+
+
+    private fun setPriority(priority: Int) {
+        val listOfPriorityradioButton = listOf(
+            radioButtonLow,
+            radioButtonMedium,
+            radioButtonHigh
+        )
+        listOfPriorityradioButton[priority].isChecked = true ///изменятся ли автоматом остальные?????????
+        //val radioGroup = findViewById<RadioGroup>(R.id.radioGroupPriorityBasket)
+        //radioGroup.check(radioButtonHigh.id)
+    }
     private fun getPriority() = when {
         radioButtonLow.isChecked -> 0
         radioButtonMedium.isChecked -> 1
@@ -99,8 +135,14 @@ class EditBasketActivity : AppCompatActivity() {
     }
 
     companion object {
-        fun newIntent(context: Context): Intent {
+        fun newCreateIntent(context: Context): Intent {
             return Intent(context, EditBasketActivity::class.java)
+        }
+
+        fun newEditIntent(context: Context, idBasket: Int): Intent {
+            val intent = Intent(context, EditBasketActivity::class.java)
+            intent.putExtra(BASKET_ID, idBasket)
+            return intent
         }
     }
 }

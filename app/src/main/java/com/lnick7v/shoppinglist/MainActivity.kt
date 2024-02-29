@@ -18,6 +18,14 @@ class MainActivity : AppCompatActivity() {
         mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
         initViews()
         basketsAdapter = BasketsAdapter()
+
+        basketsAdapter.setOnBasketClickListener(object: BasketsAdapter.OnBasketClickListener {
+            override fun onBasketClick(basket: Basket) {
+                val intent = EditBasketActivity.newEditIntent(this@MainActivity, basket.id)
+                startActivity(intent)
+            }
+        } )
+
         recyclerViewBasket.adapter = basketsAdapter
 
         mainViewModel.getBaskets().observe(this) { baskets ->
@@ -49,7 +57,7 @@ class MainActivity : AppCompatActivity() {
 
 
         buttonAddBasket.setOnClickListener {
-            startActivity(EditBasketActivity.newIntent(this))
+            startActivity(EditBasketActivity.newCreateIntent(this))
         }
     }
 

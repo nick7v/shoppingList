@@ -10,6 +10,11 @@ import androidx.recyclerview.widget.RecyclerView
 
 class BasketsAdapter: RecyclerView.Adapter<BasketsAdapter.BasketsViewHolder>() {
     private var baskets = listOf<Basket>()
+    private var onBasketClickListener: OnBasketClickListener? = null
+
+    fun setOnBasketClickListener(onBasketClickListener: OnBasketClickListener) {
+        this.onBasketClickListener = onBasketClickListener
+    }
 
     fun getBaskets(): List<Basket> {
         return ArrayList(baskets)
@@ -36,6 +41,9 @@ class BasketsAdapter: RecyclerView.Adapter<BasketsAdapter.BasketsViewHolder>() {
         val basket = baskets[position]
         holder.textViewBasket.text = basket.name
         holder.textViewBasketDate.text = basket.date
+        holder.itemView.setOnClickListener {
+            if(onBasketClickListener != null) onBasketClickListener!!.onBasketClick(basket)
+        }
 
         //block of code for assigning the background color to cardView
         val colorResId = when (basket.priority) {
@@ -49,6 +57,10 @@ class BasketsAdapter: RecyclerView.Adapter<BasketsAdapter.BasketsViewHolder>() {
 
     override fun getItemCount(): Int {
         return baskets.size
+    }
+
+    interface OnBasketClickListener {
+        fun onBasketClick(basket: Basket) {}
     }
 
 
