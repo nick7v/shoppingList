@@ -1,14 +1,10 @@
 package com.lnick7v.shoppinglist
 
-import android.text.Editable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
-import androidx.core.widget.addTextChangedListener
-import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.RecyclerView
 
 class ProductsAdapter:RecyclerView.Adapter<ProductsAdapter.ProductsViewHolder>() {
