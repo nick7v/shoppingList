@@ -6,13 +6,13 @@ import androidx.room.Ignore
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "products"/*,
+    tableName = "products",
     foreignKeys = [ForeignKey(
         entity = Basket::class,
         parentColumns = ["id"],   //id Basket
         childColumns = ["basketId"],
         onDelete = ForeignKey.CASCADE
-    )]*/
+    )]
 )
 class Product(
     @field: PrimaryKey(autoGenerate = true)

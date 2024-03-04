@@ -104,8 +104,8 @@
             android:layout_marginHorizontal="8dp"
             android:layout_marginTop="24dp"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:itemCount="7"
-            tools:listitem="@layout/basket_item" />
+            tools:itemCount="4"
+            tools:listitem="@layout/product_item" />
 
         <Button
             android:id="@+id/buttonSave"
@@ -118,6 +118,16 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/recyclerViewProduct" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/refresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            android:contentDescription="@null"
+
+            app:srcCompat="@android:drawable/ic_input_add" />
 
 
     </LinearLayout>

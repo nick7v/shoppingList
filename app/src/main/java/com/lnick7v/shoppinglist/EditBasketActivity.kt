@@ -3,6 +3,9 @@ package com.lnick7v.shoppinglist
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.RadioButton
@@ -11,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 const val BASKET_ID = "idBasket"
 
@@ -25,7 +29,9 @@ class EditBasketActivity : AppCompatActivity() {
     private lateinit var productsAdapter: ProductsAdapter
     private lateinit var recyclerViewProducts: RecyclerView
 
-    private var basketID: Int = -1
+    private lateinit var refresh: FloatingActionButton  //!!!!!!!!!!!!!ВРЕМЕННО
+
+    private var basketID: Int = -1 // -1 - default value for creating new basket Activity mode
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,19 +40,61 @@ class EditBasketActivity : AppCompatActivity() {
         initViews()
         selectActivityStartMode()  // edit existing or create new basket
 
-
         productsAdapter = ProductsAdapter()
+
+        /* productsAdapter.setProductAddTextChangedListener(object: ProductsAdapter.ProductAddTextChangedListener{
+             override fun afterTextChanged(text: Editable, position: Int) {
+                 //Toast.makeText(this@EditBasketActivity, text, Toast.LENGTH_SHORT).show()//!!!!!!!!!!!!!!!!!!!!!
+                 if (viewModel.getProductsSize() == position + 1) {
+                     viewModel.addProduct(Product("$position", 0.0, basketID))
+                 }
+             }
+         } )*/
+        productsAdapter.setOnProductFocusChangeListener(object :
+            ProductsAdapter.OnProductFocusChangeListener {
+            override fun onProductFocusChange(
+                product: Product,
+                position: Int,
+                view: View,
+                hasFocus: Boolean,
+                productsSize: Int
+            ) {
+                if (position == productsSize - 1) {
+                    if (hasFocus) {
+                        viewModel.addEmptyProductToEnd(basketID)
+                        //***** КОСТЫЛЬ, нужно вызывать notifyItemChanged в другом месте, после обновления БД в адаптере
+                        Thread {
+                            Thread.sleep(2000)
+                            productsAdapter.notifyItemRangeInserted(position + 1, 1)
+                        }
+                        //*************************
+                        Log.d("product", "ADD EMPTY PRODUCT id ${product.id}")
+                    }
+                }
+                if (!hasFocus) {
+                    val newName = (view as EditText).text.toString().trim()
+                    viewModel.updateProduct(newName, product.id)
+                    //***** КОСТЫЛЬ, нужно вызывать notifyItemChanged в другом месте, после обновления БД в адаптере
+                    /*Thread {
+                        Thread.sleep(2000)
+                        productsAdapter.notifyItemChanged(position)
+                    }*/
+                    //*************************
+                    Log.d("product", "UPDATE PRODUCT id ${product.id} new name: ${newName}")
+                }
+            }
+        })
+
         recyclerViewProducts.adapter = productsAdapter
 
         viewModel.getProducts(basketID).observe(this) { products ->
+            if (products.isEmpty()) viewModel.addEmptyProductToEnd(basketID)
+
             productsAdapter.setProducts(products)
         }
 
-        viewModel.addProduct(Product("вобла", 100.50, 1))
-        viewModel.addProduct(Product("мясо", 200.50, 1))
-
-        val itemTouchHelper = ItemTouchHelper(object: ItemTouchHelper
-            .SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT){
+        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper
+        .SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
             override fun onMove(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
@@ -59,6 +107,7 @@ class EditBasketActivity : AppCompatActivity() {
                 val position = viewHolder.adapterPosition
                 val product = productsAdapter.getProducts()[position]
                 viewModel.removeProduct(product)
+                productsAdapter.notifyItemRemoved(position)
             }
         })
 
@@ -67,11 +116,15 @@ class EditBasketActivity : AppCompatActivity() {
 
 
         viewModel.getCloseScreen().observe(this) { closeScreen ->
-            if(closeScreen) finish()
+            if (closeScreen) finish()
         }
 
         buttonSave.setOnClickListener {
             saveBasket()
+        }
+
+        refresh.setOnClickListener {
+            productsAdapter.notifyDataSetChanged()
         }
     }
 
@@ -79,23 +132,21 @@ class EditBasketActivity : AppCompatActivity() {
         if (editTextBasketName.text.isEmpty() || editTextDateOfBasket.text.isEmpty()) {
             Toast.makeText(this, "Укажите название и дату", Toast.LENGTH_SHORT).show()
         } else {
-            val basket = Basket(
-                basketID,
-                editTextBasketName.text.toString().trim(),
-                getPriority(),
-                editTextDateOfBasket.text.toString().trim())
-
-            viewModel.addBasket(basket)
+            val name = editTextBasketName.text.toString().trim()
+            val date = editTextDateOfBasket.text.toString().trim()
+            viewModel.updateBasket(name, date, getPriority(), basketID)
         }
     }
 
 
     private fun selectActivityStartMode() {
         basketID = intent.getIntExtra(BASKET_ID, -1)
-        if(basketID != -1) { //Edit an existing basket
+        if (basketID != -1) { //Edit an existing basket mode
             startActivityInEditBasketMode(basketID)
         } else { //Create a new basket
-            basketID = viewModel.getNewBasketId()
+            //basketID = viewModel.getNewBasketId()
+            basketID = viewModel.addBasket(Basket("", getPriority(), ""))
+            // TODO(удаление имеющихся продуктов из БД, если корзина не была создана)
         }
     }
 
@@ -104,7 +155,6 @@ class EditBasketActivity : AppCompatActivity() {
         editTextBasketName.setText(basket.name)
         editTextDateOfBasket.setText(basket.date)
         setPriority(basket.priority)
-
     }
 
 
@@ -114,10 +164,9 @@ class EditBasketActivity : AppCompatActivity() {
             radioButtonMedium,
             radioButtonHigh
         )
-        listOfPriorityradioButton[priority].isChecked = true ///изменятся ли автоматом остальные?????????
-        //val radioGroup = findViewById<RadioGroup>(R.id.radioGroupPriorityBasket)
-        //radioGroup.check(radioButtonHigh.id)
+        listOfPriorityradioButton[priority].isChecked = true
     }
+
     private fun getPriority() = when {
         radioButtonLow.isChecked -> 0
         radioButtonMedium.isChecked -> 1
@@ -132,6 +181,7 @@ class EditBasketActivity : AppCompatActivity() {
         radioButtonHigh = findViewById(R.id.radioButtonHigh)
         buttonSave = findViewById(R.id.buttonSave)
         recyclerViewProducts = findViewById(R.id.recyclerViewProduct)
+        refresh = findViewById(R.id.refresh)  ///!!!!!! TEMPORARY
     }
 
     companion object {
