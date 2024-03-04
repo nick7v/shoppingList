@@ -3,6 +3,8 @@ package com.lnick7v.shoppinglist
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -27,6 +29,7 @@ class EditBasketActivity : AppCompatActivity() {
     private lateinit var viewModel: EditBasketViewModel
     private lateinit var productsAdapter: ProductsAdapter
     private lateinit var recyclerViewProducts: RecyclerView
+    private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var refresh: FloatingActionButton  //!!!!!!!!!!!!!ВРЕМЕННО
 
@@ -63,9 +66,10 @@ class EditBasketActivity : AppCompatActivity() {
                         viewModel.addEmptyProductToEnd(basketID)
                         //***** КОСТЫЛЬ, нужно вызывать notifyItemChanged в другом месте, после обновления БД в адаптере
                         Thread {
-                            Thread.sleep(2000)
-                            productsAdapter.notifyItemRangeInserted(position + 1, 1)
-                        }
+                            Thread.sleep(1000)
+                            //handler.post { productsAdapter.notifyItemInserted(position + 1) } // выходит исключение
+                            handler.post { productsAdapter.notifyItemRangeChanged(position + 1, productsSize + 1) }  //productsAdapter.getItemCount()
+                        }.start()
                         //*************************
                         Log.d("product", "ADD EMPTY PRODUCT id ${product.id}")
                     }
@@ -73,11 +77,12 @@ class EditBasketActivity : AppCompatActivity() {
                 if (!hasFocus) {
                     val newName = (view as EditText).text.toString().trim()
                     viewModel.updateProduct(newName, product.id)
+                    //*********ВРОДЕ СТАЛ РАБОТАТЬ И БЕЗ ЭТОГО КОСТЫЛЯ
                     //***** КОСТЫЛЬ, нужно вызывать notifyItemChanged в другом месте, после обновления БД в адаптере
                     /*Thread {
                         Thread.sleep(2000)
                         productsAdapter.notifyItemChanged(position)
-                    }*/
+                    }.start()*/
                     //*************************
                     Log.d("product", "UPDATE PRODUCT id ${product.id} new name: ${newName}")
                 }
@@ -87,9 +92,7 @@ class EditBasketActivity : AppCompatActivity() {
         recyclerViewProducts.adapter = productsAdapter
 
         viewModel.getProducts(basketID).observe(this) { products ->
-            if (products.isEmpty()) viewModel.addEmptyProductToEnd(basketID)
-
-            productsAdapter.setProducts(products)
+           productsAdapter.setProducts(products)
         }
 
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper
@@ -106,7 +109,13 @@ class EditBasketActivity : AppCompatActivity() {
                 val position = viewHolder.adapterPosition
                 val product = productsAdapter.getProducts()[position]
                 viewModel.removeProduct(product)
-                productsAdapter.notifyItemRemoved(position)
+                //***** КОСТЫЛЬ, нужно вызывать notifyItemRemoved в другом месте, после обновления БД в адаптере
+                Thread {
+                    Thread.sleep(500)
+                    handler.post { productsAdapter.notifyItemRemoved(position) }
+                    handler.post { productsAdapter.notifyItemRangeChanged(position, productsAdapter.getItemCount()) }
+                }.start()
+                //*************************
             }
         })
 
@@ -120,6 +129,10 @@ class EditBasketActivity : AppCompatActivity() {
 
         buttonSave.setOnClickListener {
             saveBasket()
+        }
+
+        editTextBasketName.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) productsAdapter.notifyItemRangeChanged(0, productsAdapter.itemCount)
         }
 
         refresh.setOnClickListener {
@@ -143,8 +156,8 @@ class EditBasketActivity : AppCompatActivity() {
         if (basketID != -1) { //Edit an existing basket mode
             startActivityInEditBasketMode(basketID)
         } else { //Create a new basket
-            //basketID = viewModel.getNewBasketId()
             basketID = viewModel.addBasket(Basket("", getPriority(), ""))
+            viewModel.addEmptyProductToEnd(basketID)
             // TODO(удаление имеющихся продуктов из БД, если корзина не была создана)
         }
     }

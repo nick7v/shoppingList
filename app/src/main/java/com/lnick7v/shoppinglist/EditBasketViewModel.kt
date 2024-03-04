@@ -12,22 +12,6 @@ class EditBasketViewModel(application: Application) : AndroidViewModel(applicati
     fun getProducts(idBasket: Int): LiveData<List<Product>> {
         return basketsProductsDatabase.ProductsDao().getProducts(idBasket)
     }
-    /*fun getProducts(idBasket: Int): LiveData<List<Product>> {
-        if (isItNewBasket) {
-            addEmptyProductToEnd(idBasket)
-        } else {
-            val t1 = Thread {
-                tempProductList.postValue(
-                    basketsProductsDatabase.ProductsDao().getProducts(idBasket)
-                )
-            }
-            t1.start()
-            t1.join()
-        }
-        return tempProductList
-    }*/
-
-    //fun getProductsSize(): Int = tempProductList.value?.toMutableList()?.size ?: 0
 
     fun addProduct(product: Product) {
         Thread { basketsProductsDatabase.ProductsDao().add(product) }.start()
@@ -55,15 +39,6 @@ class EditBasketViewModel(application: Application) : AndroidViewModel(applicati
         t1.join()
         return basket!!
     }
-
-    /*fun getNewBasketId(): Int { //TODO(ID ФОРМИРОВАТЬ НЕ ИСХОДЯ ИЗ SIZE А ИСХОДЯ ИЗ ПОСЛЕДНЕГО ID!!!!!!!!!!) ИЛИ ЗАМЕНИТЬ НА АВТО ФОРМИРОВАНИЕ
-        var id: Int? = null
-        val t1 = Thread { id = basketsProductsDatabase.BasketDao().getBasketsDBSize() }
-        t1.start()
-        t1.join()
-        isItNewBasket = true
-        return (id!! + 1)
-    }*/
 
     fun addBasket(basket: Basket): Int {
         var id: Long? = null
