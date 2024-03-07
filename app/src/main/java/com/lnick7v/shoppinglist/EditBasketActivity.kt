@@ -178,7 +178,8 @@ class EditBasketActivity : AppCompatActivity() {
     }
 
     private fun addEmptyProductAndSetFocus(productsSize: Int) {
-        //TODO(read 2 last pages in SOF)
+        //TODO(при удалении сдвиг элементов вверх, view на который наводить фокус по умолчанию
+        // держать клавиатуру открытой при скроле RV)
         recyclerViewProducts.clearFocus() // For saving text in focused EditText
         viewModel.addEmptyProductToEnd(basketID)
         ////////// КОСТЫЛЬ, нужно вызывать notifyItemChanged в другом месте, после обновления БД в адаптере
