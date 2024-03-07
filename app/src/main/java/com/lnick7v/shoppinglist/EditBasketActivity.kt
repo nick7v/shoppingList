@@ -8,6 +8,8 @@ import android.os.Looper
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
+import android.view.inputmethod.InputMethodManager
+import android.widget.AbsListView
 import android.widget.Button
 import android.widget.EditText
 import android.widget.RadioButton
@@ -17,6 +19,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+
 
 const val BASKET_ID = "idBasket"
 
@@ -36,12 +39,17 @@ class EditBasketActivity : AppCompatActivity() {
 
     private var basketID: Int = -1 // -1 - default value for creating new basket Activity mode
 
+    //TODO("исчезновение блока над RV при появлении клавиатуры и первого скрола вниз - появление
+    // при скрытиии клавиатуры и скрола до самого верха
+    //
+    // ")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_basket)
         viewModel = ViewModelProvider(this)[EditBasketViewModel::class.java]
         initViews()
         selectActivityStartMode()  // edit existing or create new basket
+        //preventKeyboardClosing()
 
         productsAdapter = ProductsAdapter()
 
@@ -98,7 +106,7 @@ class EditBasketActivity : AppCompatActivity() {
                 event: KeyEvent,
                 position: Int
             ): Boolean {
-                return if (keyCode == KeyEvent.KEYCODE_ENTER && position == productsSize-1) {
+                return if (keyCode == KeyEvent.KEYCODE_ENTER && position == productsSize - 1) {
                     /*if (position == productsSize-1)*/ addEmptyProductAndSetFocus(productsSize)
                     //else recyclerViewProducts.findViewHolderForAdapterPosition(position + 1)!!.itemView.requestFocus()
                     true
@@ -109,8 +117,26 @@ class EditBasketActivity : AppCompatActivity() {
         recyclerViewProducts.adapter = productsAdapter
 
         viewModel.getProducts(basketID).observe(this) { products ->
-           productsAdapter.setProducts(products)
+            productsAdapter.setProducts(products)
         }
+
+
+        recyclerViewProducts.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+
+                if (newState == AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL) {
+                    recyclerViewProducts.clearFocus()
+                }
+            }
+        })
+
+       /* KeyboardUtils.addKeyboardToggleListener(this) { isVisible ->
+            Log.e("MyActivity", "keyboard visible: $isVisible")
+            TODO(исчезновение и появление блока над RV)
+        }*/
+
+
 
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper
         .SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
@@ -131,7 +157,12 @@ class EditBasketActivity : AppCompatActivity() {
                 Thread {
                     Thread.sleep(500)
                     handler.post { productsAdapter.notifyItemRemoved(position) }
-                    handler.post { productsAdapter.notifyItemRangeChanged(position, productsAdapter.itemCount) }
+                    handler.post {
+                        productsAdapter.notifyItemRangeChanged(
+                            position,
+                            productsAdapter.itemCount
+                        )
+                    }
                 }.start()
                 //*************************
             }
@@ -167,6 +198,13 @@ class EditBasketActivity : AppCompatActivity() {
 
     }
 
+
+    /*private fun preventKeyboardClosing() {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(recyclerViewProducts.windowToken, 0)
+        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
+    }*/
+
     private fun saveBasket() {
         if (editTextBasketName.text.isEmpty() || editTextDateOfBasket.text.isEmpty()) {
             Toast.makeText(this, "Укажите название и дату", Toast.LENGTH_SHORT).show()
@@ -186,7 +224,7 @@ class EditBasketActivity : AppCompatActivity() {
         val t1 = Thread {
             Thread.sleep(500)
             handler.post {
-                productsAdapter.notifyItemRangeChanged(productsSize - 1, productsSize )
+                productsAdapter.notifyItemRangeChanged(productsSize - 1, productsSize)
             }
         }
         t1.start()
