@@ -83,11 +83,11 @@ class ProductsAdapter : RecyclerView.Adapter<ProductsAdapter.ProductsViewHolder>
             holder.editTextProductName.setOnFocusChangeListener { view, hasFocus ->
                 if (onProductFocusChangeListener != null) {
                     onProductFocusChangeListener!!.onProductFocusChange(product, view, hasFocus)
-                    //productAddTextChangedListener!!.afterTextChanged(it!!, position) //NEED TO TEST it!!!!!!!!!!
+                    //productAddTextChangedListener!!.afterTextChanged(it!!, position)
                 }
             }
             holder.editTextProductName.setOnKeyListener { view, keyCode, event ->
-                if (onProductKeyListener != null /*&& position == products.size - 1*/) {
+                if (onProductKeyListener != null) {
                     onProductKeyListener!!.onProductKeyListener(products.size, keyCode, event, position)
                 }
                 false

@@ -13,7 +13,7 @@ class EditBasketViewModel(application: Application) : AndroidViewModel(applicati
         return basketsProductsDatabase.ProductsDao().getProducts(idBasket)
     }
 
-    fun addProduct(product: Product) {
+    private fun addProduct(product: Product) {
         Thread { basketsProductsDatabase.ProductsDao().add(product) }.start()
     }
 
@@ -48,6 +48,14 @@ class EditBasketViewModel(application: Application) : AndroidViewModel(applicati
         t1.start()
         t1.join()
         return id!!.toInt()
+    }
+
+    fun removeBasketAndExit(basketID: Int) {
+        Thread {
+            basketsProductsDatabase.BasketDao().remove(basketID)
+            shouldCloseScreen.postValue(true)
+        }.start()
+
     }
 
     fun updateBasket(name: String, date: String, priority: Int, id: Int) {

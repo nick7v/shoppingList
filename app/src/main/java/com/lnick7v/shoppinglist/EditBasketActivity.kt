@@ -14,6 +14,9 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.RadioButton
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.OnBackPressedDispatcher
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -39,10 +42,20 @@ class EditBasketActivity : AppCompatActivity() {
 
     private var basketID: Int = -1 // -1 - default value for creating new basket Activity mode
 
-    //TODO("исчезновение блока над RV при появлении клавиатуры и первого скрола вниз - появление
-    // при скрытиии клавиатуры и скрола до самого верха
-    //
-    // ")
+    /*TODO("1.1. КАК организовать кеш для списка ппокупок??? т.е. чтобы изменения или добавления
+        продуктов и полей корзины писались не в базу напрямую а вначале в кэш и уже после нажатия
+        "сохранить" попадали из кэша в базу????????????????????????????????????????????????????????????????????
+        1. ичезновение блока над RV при появлении клавиатуры и первого скрола вниз - появление
+        при скрытиии клавиатуры и скрола до самого верха - сделать когда изучу фрагменты
+        2. добавить поле кол-во в item RV
+        3. Проработать цену
+        4. Свайп вправо и свайп влево - разные режимы: факт покупки с указанием цены в диалоге и без указания цены -
+        перемещение item-а в конец списка, с изменением цвета фона и проставление галочки
+        5. Удаление элемента по долгому нажатию с выходом контекстного меню: удалить, отменить покупку, указаьть цену
+        6. Появление блока подсказки о свайпах влево и вправо при старте активити
+        7. Подумать о режимах старта активити: создание нового списка, редактирования сущ., и совершения покупки
+        8. Слушатель системной кнопки назад - появление диалога сохранить список или нет -> удаление списка и продуктов из БД
+        ")*/
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_basket)
@@ -61,33 +74,42 @@ class EditBasketActivity : AppCompatActivity() {
                  }
              }
          } )*/
+
+
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                recyclerViewProducts.clearFocus()
+                AlertDialog.Builder(this@EditBasketActivity).apply {
+                    setTitle("Закрытие списка покупок")
+                    setMessage("Сохранить изменения?")
+                    setPositiveButton("Да") { dialog, id ->
+                        saveBasket(false)
+                    }
+                    setNegativeButton("Нет") { dialog, id ->
+                        viewModel.removeBasketAndExit(basketID)
+                        //TODO("replace removing basket to removing cache of basket")
+                    }
+                    setNeutralButton("Отмена") {dialog, _ ->
+                        dialog.cancel()
+                    }
+                }.show()
+            }
+        })
+
+
         productsAdapter.setOnProductFocusChangeListener(object :
             ProductsAdapter.OnProductFocusChangeListener {
             override fun onProductFocusChange(product: Product, view: View, hasFocus: Boolean) {
-                /*if (position == productsSize - 1) { //!!!!!Заменил на кнопку и снятие фокуса
-                    if (hasFocus) {
-                        viewModel.addEmptyProductToEnd(basketID)
-                        ////////// КОСТЫЛЬ, нужно вызывать notifyItemChanged в другом месте, после обновления БД в адаптере
-                        Thread {
-                            Thread.sleep(1000)
-                            //handler.post { productsAdapter.notifyItemInserted(position + 1) } // выходит исключение
-                            handler.post { productsAdapter.notifyItemRangeChanged(position + 1, productsSize + 1) }  //productsAdapter.getItemCount()
-                        }.start()
-                        ///////////////////////
-                        Log.d("product", "ADD EMPTY PRODUCT id ${product.id}")
-                    }
-                }*/
                 if (!hasFocus) {
                     val newName = (view as EditText).text.toString().trim()
                     viewModel.updateProduct(newName, product.id)
-                    //*********ВРОДЕ СТАЛ РАБОТАТЬ И БЕЗ ЭТОГО КОСТЫЛЯ
                     //***** КОСТЫЛЬ, нужно вызывать notifyItemChanged в другом месте, после обновления БД в адаптере
                     /*Thread {
                         Thread.sleep(2000)
                         productsAdapter.notifyItemChanged(position)
                     }.start()*/
-                    //*************************
-                    Log.d("product", "UPDATE PRODUCT id ${product.id} new name: ${newName}")
+                    //*************************ВРОДЕ СТАЛ РАБОТАТЬ И БЕЗ ЭТОГО КОСТЫЛЯ
                 }
             }
         })
@@ -99,6 +121,7 @@ class EditBasketActivity : AppCompatActivity() {
             }
         })
 
+
         productsAdapter.setOnProductKeyListener(object : ProductsAdapter.OnProductKeyListener {
             override fun onProductKeyListener(
                 productsSize: Int,
@@ -107,12 +130,13 @@ class EditBasketActivity : AppCompatActivity() {
                 position: Int
             ): Boolean {
                 return if (keyCode == KeyEvent.KEYCODE_ENTER && position == productsSize - 1) {
-                    /*if (position == productsSize-1)*/ addEmptyProductAndSetFocus(productsSize)
-                    //else recyclerViewProducts.findViewHolderForAdapterPosition(position + 1)!!.itemView.requestFocus()
+                    addEmptyProductAndSetFocus(productsSize)
                     true
                 } else false
             }
         })
+
+
 
         recyclerViewProducts.adapter = productsAdapter
 
@@ -120,24 +144,31 @@ class EditBasketActivity : AppCompatActivity() {
             productsAdapter.setProducts(products)
         }
 
+        viewModel.getCloseScreen().observe(this) { closeScreen ->
+            if (closeScreen) finish()
+        }
 
+        /**
+         * if user is scrolling RV through the list of products, then we hide the focus to save data
+         * and to prevent displaying focus on other items when scrolling
+         */
         recyclerViewProducts.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
-
                 if (newState == AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL) {
                     recyclerViewProducts.clearFocus()
                 }
             }
         })
 
-       /* KeyboardUtils.addKeyboardToggleListener(this) { isVisible ->
+        /*KeyboardUtils.addKeyboardToggleListener(this) { isVisible ->
             Log.e("MyActivity", "keyboard visible: $isVisible")
-            TODO(исчезновение и появление блока над RV)
         }*/
 
-
-
+        /**
+         * implementation of removing a product by swiping
+         * TODO("see TODO code at the top of the class about left and right swiping")
+         */
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper
         .SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
             override fun onMove(
@@ -167,17 +198,12 @@ class EditBasketActivity : AppCompatActivity() {
                 //*************************
             }
         })
-
         itemTouchHelper.attachToRecyclerView(recyclerViewProducts)
 
 
 
-        viewModel.getCloseScreen().observe(this) { closeScreen ->
-            if (closeScreen) finish()
-        }
-
         buttonSave.setOnClickListener {
-            saveBasket()
+            saveBasket(true)
         }
 
         editTextBasketName.setOnFocusChangeListener { _, hasFocus ->
@@ -198,15 +224,8 @@ class EditBasketActivity : AppCompatActivity() {
 
     }
 
-
-    /*private fun preventKeyboardClosing() {
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(recyclerViewProducts.windowToken, 0)
-        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
-    }*/
-
-    private fun saveBasket() {
-        if (editTextBasketName.text.isEmpty() || editTextDateOfBasket.text.isEmpty()) {
+    private fun saveBasket(checkFields: Boolean) {
+        if ((editTextBasketName.text.isEmpty() || editTextDateOfBasket.text.isEmpty()) && checkFields) {
             Toast.makeText(this, "Укажите название и дату", Toast.LENGTH_SHORT).show()
         } else {
             val name = editTextBasketName.text.toString().trim()
@@ -216,8 +235,6 @@ class EditBasketActivity : AppCompatActivity() {
     }
 
     private fun addEmptyProductAndSetFocus(productsSize: Int) {
-        //TODO(при удалении сдвиг элементов вверх, view на который наводить фокус по умолчанию
-        // держать клавиатуру открытой при скроле RV)
         recyclerViewProducts.clearFocus() // For saving text in focused EditText
         viewModel.addEmptyProductToEnd(basketID)
         ////////// КОСТЫЛЬ, нужно вызывать notifyItemChanged в другом месте, после обновления БД в адаптере
@@ -246,7 +263,6 @@ class EditBasketActivity : AppCompatActivity() {
         } else { //Create a new basket
             basketID = viewModel.addBasket(Basket("", getPriority(), ""))
             viewModel.addEmptyProductToEnd(basketID)
-            // TODO(удаление имеющихся продуктов из БД, если корзина не была создана)
         }
     }
 
