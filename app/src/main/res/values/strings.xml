@@ -8,4 +8,6 @@
     <string name="Save">Сохранить</string>
     <string name="enter_date_purchased">Выберите дату покупки</string>
     <string name="enter_goods">Введите товар</string>
+    <string name="closing_list_of_products">Закрытие списка покупок</string>
+    <string name="save_changes_question">Сохранить изменения?</string>
 </resources>

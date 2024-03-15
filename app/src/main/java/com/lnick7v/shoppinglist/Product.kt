@@ -19,8 +19,8 @@ class Product(
     val id: Int,
     val name: String,
     val price: Double,
-    val basketId: Int
+    val basketId: Long
 ) {
     @Ignore
-    constructor(name: String, price: Double, basketId: Int) : this(0, name, price, basketId)
+    constructor(name: String, price: Double, basketId: Long) : this(0, name, price, basketId)
 }

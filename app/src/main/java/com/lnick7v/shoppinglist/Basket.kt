@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "baskets")
 class Basket(
     @field: PrimaryKey(autoGenerate = true)
-    val id: Int,
+    val id: Long,
     val name: String,
     val priority: Int,
     val date: String
