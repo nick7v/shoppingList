@@ -5,6 +5,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Single
 
 @Dao
 interface BasketDao {
@@ -15,14 +17,15 @@ interface BasketDao {
     fun getBasketsDBSize(): Int*/
 
     @Query("SELECT * FROM baskets WHERE id = :idBasket")
-    fun getOneBasket(idBasket: Int): Basket
+    //fun getOneBasket(idBasket: Int): Basket
+    fun getOneBasket(idBasket: Long): Single<Basket>
 
     @Query("UPDATE baskets SET name = :name, date = :date, priority = :priority WHERE id = :id")
-    fun updateBasket(name: String, date: String, priority: Int, id: Int)
+    fun updateBasket(name: String, date: String, priority: Int, id: Long): Completable
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun add(basket: Basket): Long
+    fun add(basket: Basket): Single <Long>
 
     @Query("DELETE FROM baskets WHERE id = :id")
-    fun remove(id: Int)
+    fun remove(id: Long): Completable
 }

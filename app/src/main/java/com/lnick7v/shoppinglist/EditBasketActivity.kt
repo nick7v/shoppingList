@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.widget.AbsListView
@@ -19,6 +20,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.functions.Consumer
 
 
 const val BASKET_ID = "idBasket"
@@ -34,14 +37,18 @@ class EditBasketActivity : AppCompatActivity() {
     private lateinit var productsAdapter: ProductsAdapter
     private lateinit var recyclerViewProducts: RecyclerView
     private val handler = Handler(Looper.getMainLooper())
+    private val compositeDisposable = CompositeDisposable()
 
     private lateinit var refresh: FloatingActionButton  //!!!!!!!!!!!!!ВРЕМЕННО
 
-    private var basketID: Int = -1 // -1 - default value for creating new basket Activity mode
+    private var basketID: Long = -1 // -1 - default value for creating new basket Activity mode
 
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!??????????????????????????????????????????????????????
     /*TODO("1.1. КАК организовать кеш для списка ппокупок??? т.е. чтобы изменения или добавления
         продуктов и полей корзины писались не в базу напрямую а вначале в кэш и уже после нажатия
         "сохранить" попадали из кэша в базу????????????????????????????????????????????????????????????????????
+
+        // это вопросы не к тебе, это памятка для себя
         1. ичезновение блока над RV при появлении клавиатуры и первого скрола вниз - появление
         при скрытиии клавиатуры и скрола до самого верха - сделать когда изучу фрагменты
         2. добавить поле кол-во в item RV
@@ -52,14 +59,17 @@ class EditBasketActivity : AppCompatActivity() {
         6. Появление блока подсказки о свайпах влево и вправо при старте активити
         7. Подумать о режимах старта активити: создание нового списка, редактирования сущ., и совершения покупки
         8. Слушатель системной кнопки назад - появление диалога сохранить список или нет -> удаление списка и продуктов из БД
+        9. Запрет на поворот экрана во всех активити (сейчас еще при повороте экрана в режиме создания
+        новой корзины, каждый раз создает новую корзину
+        10. Не сохранять в корзину пустые продукты
         ")*/
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_basket)
         viewModel = ViewModelProvider(this)[EditBasketViewModel::class.java]
         initViews()
         selectActivityStartMode()  // edit existing or create new basket
-        //preventKeyboardClosing()
 
         productsAdapter = ProductsAdapter()
 
@@ -78,8 +88,8 @@ class EditBasketActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 recyclerViewProducts.clearFocus()
                 AlertDialog.Builder(this@EditBasketActivity).apply {
-                    setTitle("Закрытие списка покупок")
-                    setMessage("Сохранить изменения?")
+                    setTitle(getString(R.string.closing_list_of_products))
+                    setMessage(getString(R.string.save_changes_question))
                     setPositiveButton("Да") { dialog, id ->
                         saveBasket(false)
                     }
@@ -136,10 +146,12 @@ class EditBasketActivity : AppCompatActivity() {
 
 
         recyclerViewProducts.adapter = productsAdapter
-
-        viewModel.getProducts(basketID).observe(this) { products ->
+        //перенес в метод, который вызывается после выбора режима старта активити (редактирования сущ.
+        //или создания новой корзины, т.к. при создании новой корзины, RxJava создает новую корзину
+        //после того как происходит запрос в БД если оставить код здесь
+        /*viewModel.getProducts(basketID).observe(this) { products ->
             productsAdapter.setProducts(products)
-        }
+        }*/
 
         viewModel.getCloseScreen().observe(this) { closeScreen ->
             if (closeScreen) finish()
@@ -218,8 +230,16 @@ class EditBasketActivity : AppCompatActivity() {
             Thread.sleep(300)
             handler.post { productsAdapter.notifyDataSetChanged() }
         }.start()
-
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //в правильном ли ЖЦ активити указал отмену подписки ????????????????????????
+        compositeDisposable.dispose()
+    }
+
+
 
     private fun saveBasket(checkFields: Boolean) {
         if ((editTextBasketName.text.isEmpty() || editTextDateOfBasket.text.isEmpty()) && checkFields) {
@@ -254,20 +274,53 @@ class EditBasketActivity : AppCompatActivity() {
 
 
     private fun selectActivityStartMode() {
-        basketID = intent.getIntExtra(BASKET_ID, -1)
-        if (basketID != -1) { //Edit an existing basket mode
+        basketID = intent.getLongExtra(BASKET_ID, -1)
+        if (basketID != -1L) { //Edit an existing basket mode
             startActivityInEditBasketMode(basketID)
+            observeBasketBD()
         } else { //Create a new basket
-            basketID = viewModel.addBasket(Basket("", getPriority(), ""))
-            viewModel.addEmptyProductToEnd(basketID)
+            startActivityInNewBasketMode()
         }
     }
 
-    private fun startActivityInEditBasketMode(idBasket: Int) {
-        val basket = viewModel.editBasket(idBasket)
-        editTextBasketName.setText(basket.name)
-        editTextDateOfBasket.setText(basket.date)
-        setPriority(basket.priority)
+   private fun startActivityInNewBasketMode() {
+        val disposable = viewModel.addBasket(Basket("", getPriority(), ""))
+            .subscribe({ idBasket ->
+                Log.d("EditBasketActivity", "addBasket: basket with id $idBasket")
+                basketID = idBasket
+                observeBasketBD()
+                viewModel.addEmptyProductToEnd(basketID)
+            })
+            {
+                Log.e("EditBasketActivity", "Error: addBasket - ${it.printStackTrace()}()")
+            }
+        compositeDisposable.add(disposable)
+    }
+
+    private fun startActivityInEditBasketMode(idBasket: Long) {
+        val disposable = viewModel.getOneBasket(idBasket)
+            .subscribe(object : Consumer<Basket> {
+                override fun accept(oneBasket: Basket) {
+                    editTextBasketName.setText(oneBasket.name)
+                    editTextDateOfBasket.setText(oneBasket.date)
+                    setPriority(oneBasket.priority)
+                    Log.d("EditBasketActivity", "getOneBasket: with id $idBasket")
+                }
+            }, object : Consumer<Throwable> {
+                override fun accept(error: Throwable) {
+                    Log.e(
+                        "EditBasketActivity",
+                        "Error: getOneBasket - ${error.printStackTrace()}()"
+                    )
+                }
+            })
+        compositeDisposable.add(disposable)
+    }
+
+    private fun observeBasketBD() {
+        viewModel.getProducts(basketID).observe(this) { products ->
+            productsAdapter.setProducts(products)
+        }
     }
 
 
@@ -302,7 +355,7 @@ class EditBasketActivity : AppCompatActivity() {
             return Intent(context, EditBasketActivity::class.java)
         }
 
-        fun newEditIntent(context: Context, idBasket: Int): Intent {
+        fun newEditIntent(context: Context, idBasket: Long): Intent {
             val intent = Intent(context, EditBasketActivity::class.java)
             intent.putExtra(BASKET_ID, idBasket)
             return intent
